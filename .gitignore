@@ -1,0 +1,12 @@
+build/
+build-*/
+*.o
+*.obj
+*.qmlc
+*.jsc
+.qmake.stash
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+cmake_install.cmake
+compile_commands.json
