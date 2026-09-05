@@ -41,6 +41,7 @@ private:
     void openProjectWithCommand(const QString &path, const QString &commandTemplate);
     static QString formatSize(qint64 bytes);
     static QString formatTimestamp(const QDateTime &dt);
+    static QString shellQuote(const QString &path);
 
     AppSettings m_settings;
     QString m_workspaceRoot;

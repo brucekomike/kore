@@ -36,5 +36,9 @@ public:
     static QDateTime lastModifiedRecursive(const QString &path);
 
 private:
+    // Computes `size` and `lastModified` for `path` in a single recursive
+    // filesystem walk (skipping `.git` internals).
+    static void scanTree(const QString &path, qint64 &size, QDateTime &lastModified);
+
     static ProjectInfo makeProjectInfo(const QString &path, const QString &group);
 };

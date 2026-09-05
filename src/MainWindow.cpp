@@ -158,7 +158,10 @@ void MainWindow::openProjectWithCommand(const QString &path, const QString &comm
     if (path.isEmpty()) {
         return;
     }
-    const QString command = QString(commandTemplate).arg(path);
+    // The path is shell-quoted before substitution so that project
+    // directory names containing shell metacharacters (spaces, quotes,
+    // `;`, `$()`, backticks, etc.) cannot be interpreted by the shell.
+    const QString command = QString(commandTemplate).arg(shellQuote(path));
 #if defined(Q_OS_WIN)
     QProcess::startDetached(QStringLiteral("cmd"), {QStringLiteral("/C"), command});
 #else
@@ -246,4 +249,20 @@ QString MainWindow::formatTimestamp(const QDateTime &dt)
         return tr("never");
     }
     return dt.toString(Qt::ISODate);
+}
+
+QString MainWindow::shellQuote(const QString &path)
+{
+#if defined(Q_OS_WIN)
+    // cmd.exe: wrap in double quotes, doubling any embedded double quotes.
+    QString escaped = path;
+    escaped.replace(QLatin1String("\""), QLatin1String("\"\""));
+    return QLatin1Char('"') + escaped + QLatin1Char('"');
+#else
+    // POSIX sh: single-quote the value, escaping embedded single quotes by
+    // closing the quote, emitting an escaped quote, and reopening it.
+    QString escaped = path;
+    escaped.replace(QLatin1String("'"), QLatin1String("'\\''"));
+    return QLatin1Char('\'') + escaped + QLatin1Char('\'');
+#endif
 }

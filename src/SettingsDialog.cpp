@@ -38,7 +38,7 @@ SettingsDialog::SettingsDialog(AppSettings *settings, QWidget *parent)
     form->addRow(tr("Open in OpenCode command:"), m_openCodeEdit);
 
     layout->addLayout(form);
-    layout->addWidget(new QLabel(tr("Use %1 as a placeholder for the project path in commands.").arg(QStringLiteral("%1")), this));
+    layout->addWidget(new QLabel(tr("Use %1 as a placeholder for the project path; it is automatically shell-quoted, so do not add your own quotes around it.").arg(QStringLiteral("%1")), this));
 
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
     connect(buttons, &QDialogButtonBox::accepted, this, &SettingsDialog::save);

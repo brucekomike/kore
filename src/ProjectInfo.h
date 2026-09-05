@@ -1,8 +1,8 @@
 #pragma once
 
 #include <QDateTime>
+#include <QList>
 #include <QString>
-#include <QVector>
 
 // Basic information collected for a single project (repository) found under
 // the workspace root.
@@ -35,4 +35,4 @@ struct ProjectInfo
     bool isGitRepo = false;
 };
 
-using ProjectList = QVector<ProjectInfo>;
+using ProjectList = QList<ProjectInfo>;

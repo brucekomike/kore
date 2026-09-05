@@ -28,7 +28,9 @@ void AppSettings::setWorkspaceOverride(const QString &path)
 
 QString AppSettings::ideCommand() const
 {
-    return m_settings.value(QLatin1String(kIdeCommandKey), QStringLiteral("code \"%1\"")).toString();
+    // %1 is substituted with a shell-quoted project path by MainWindow, so
+    // the template itself should not add its own quoting around %1.
+    return m_settings.value(QLatin1String(kIdeCommandKey), QStringLiteral("code %1")).toString();
 }
 
 void AppSettings::setIdeCommand(const QString &command)
@@ -48,7 +50,7 @@ void AppSettings::setTerminalCommand(const QString &command)
 
 QString AppSettings::openCodeCommand() const
 {
-    return m_settings.value(QLatin1String(kOpenCodeCommandKey), QStringLiteral("opencode \"%1\"")).toString();
+    return m_settings.value(QLatin1String(kOpenCodeCommandKey), QStringLiteral("opencode %1")).toString();
 }
 
 void AppSettings::setOpenCodeCommand(const QString &command)
@@ -59,11 +61,11 @@ void AppSettings::setOpenCodeCommand(const QString &command)
 QString AppSettings::defaultTerminalCommand()
 {
 #if defined(Q_OS_WIN)
-    return QStringLiteral("cmd /K \"cd /d %1\"");
+    return QStringLiteral("cmd /K cd /d %1");
 #elif defined(Q_OS_MAC)
-    return QStringLiteral("open -a Terminal \"%1\"");
+    return QStringLiteral("open -a Terminal %1");
 #else
-    return QStringLiteral("x-terminal-emulator --working-directory=\"%1\"");
+    return QStringLiteral("x-terminal-emulator --working-directory=%1");
 #endif
 }
 

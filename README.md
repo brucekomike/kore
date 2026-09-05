@@ -46,8 +46,9 @@ Open **Settings** from the toolbar to configure:
 
 - The workspace folder (leave empty to auto-detect).
 - The command used to open a project in your IDE, terminal, or OpenCode
-  desktop. Use `%1` as a placeholder for the project path, e.g.
-  `code "%1"`.
+  desktop. Use `%1` as a placeholder for the project path — it is
+  automatically shell-quoted before substitution, so do not wrap it in your
+  own quotes, e.g. `code %1`.
 
 Settings are persisted using Qt's native per-platform storage (the Windows
 registry, macOS preferences, or an INI file under `~/.config` on Linux).

@@ -40,10 +40,10 @@ bool ProjectScanner::isGitRepository(const QString &path)
 
 qint64 ProjectScanner::directorySize(const QString &path)
 {
-    qint64 total = 0;
-    QDateTime latest;
-    walkDirectory(path, total, latest);
-    return total;
+    qint64 size = 0;
+    QDateTime lastModified;
+    scanTree(path, size, lastModified);
+    return size;
 }
 
 QDateTime ProjectScanner::lastCommitTime(const QString &path)
@@ -66,10 +66,17 @@ QDateTime ProjectScanner::lastCommitTime(const QString &path)
 
 QDateTime ProjectScanner::lastModifiedRecursive(const QString &path)
 {
-    qint64 total = 0;
-    QDateTime latest = QFileInfo(path).lastModified();
-    walkDirectory(path, total, latest);
-    return latest;
+    qint64 size = 0;
+    QDateTime lastModified;
+    scanTree(path, size, lastModified);
+    return lastModified;
+}
+
+void ProjectScanner::scanTree(const QString &path, qint64 &size, QDateTime &lastModified)
+{
+    size = 0;
+    lastModified = QFileInfo(path).lastModified();
+    walkDirectory(path, size, lastModified);
 }
 
 ProjectInfo ProjectScanner::makeProjectInfo(const QString &path, const QString &group)
@@ -79,10 +86,17 @@ ProjectInfo ProjectScanner::makeProjectInfo(const QString &path, const QString &
     info.path = path;
     info.group = group;
     info.isGitRepo = isGitRepository(path);
-    info.sizeBytes = directorySize(path);
+
+    // A single filesystem walk computes both the size and last-modified
+    // time, avoiding walking large project trees twice.
+    qint64 size = 0;
+    QDateTime lastModified;
+    scanTree(path, size, lastModified);
+    info.sizeBytes = size;
+
     info.lastUpdateTime = info.isGitRepo ? lastCommitTime(path) : QDateTime();
     if (!info.lastUpdateTime.isValid()) {
-        info.lastUpdateTime = lastModifiedRecursive(path);
+        info.lastUpdateTime = lastModified;
     }
     return info;
 }
