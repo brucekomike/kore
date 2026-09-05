@@ -9,13 +9,8 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
-find_package(Qt6 QUIET COMPONENTS Widgets Test)
-if(NOT Qt6_FOUND)
-    find_package(Qt5 5.15 REQUIRED COMPONENTS Widgets Test)
-    set(QT_VERSION_MAJOR 5)
-else()
-    set(QT_VERSION_MAJOR 6)
-endif()
+find_package(Qt6 REQUIRED COMPONENTS Widgets Test)
+set(QT_VERSION_MAJOR 6)
 
 add_library(kore_core STATIC
     src/ProjectInfo.h
