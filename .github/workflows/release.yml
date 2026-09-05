@@ -1,0 +1,94 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  linux:
+    name: Linux package
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes cmake g++ qt6-base-dev qt6-base-dev-tools
+      - name: Build
+        run: cmake -B build -S . && cmake --build build --config Release
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+      - name: Package
+        run: |
+          cmake --install build --prefix staging
+          tar -czf kore-linux.tar.gz -C staging .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kore-linux
+          path: kore-linux.tar.gz
+
+  macos:
+    name: macOS package
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Qt
+        run: brew install qt
+      - name: Build
+        run: cmake -B build -S . -DCMAKE_PREFIX_PATH="$(brew --prefix qt)" && cmake --build build --config Release
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+      - name: Bundle Qt frameworks
+        run: "$(brew --prefix qt)/bin/macdeployqt build/kore.app"
+      - name: Package
+        run: |
+          "$(brew --prefix qt)/bin/macdeployqt" build/kore.app -dmg
+          mv build/kore.dmg kore-macos.dmg
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kore-macos
+          path: kore-macos.dmg
+
+  windows:
+    name: Windows package
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: 6.8.3
+          arch: win64_msvc2022_64
+      - name: Build
+        shell: pwsh
+        run: cmake -B build -S .; cmake --build build --config Release
+      - name: Test
+        run: ctest --test-dir build -C Release --output-on-failure
+      - name: Package executable
+        shell: pwsh
+        run: Compress-Archive -Path build/Release/kore.exe -DestinationPath kore-windows.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kore-windows
+          path: kore-windows.zip
+
+  publish:
+    name: Publish release
+    runs-on: ubuntu-24.04
+    needs: [linux, macos, windows]
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          pattern: kore-*
+          merge-multiple: true
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          generate_release_notes: true
+          files: dist/*

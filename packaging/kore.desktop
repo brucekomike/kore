@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=kore
+Comment=Workspace project manager
+Exec=kore %U
+Icon=kore
+Terminal=false
+Categories=Development;Utility;
+StartupWMClass=kore

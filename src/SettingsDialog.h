@@ -9,8 +9,8 @@ class QLineEdit;
 QT_END_NAMESPACE
 
 // Simple dialog allowing the user to configure the workspace folder
-// override and the commands used to open a project in an IDE, terminal, or
-// OpenCode desktop.
+// override and the commands used to open a project in an IDE, CLI, or agent
+// IDE.
 class SettingsDialog : public QDialog
 {
     Q_OBJECT
@@ -20,6 +20,9 @@ public:
 
 private slots:
     void browseWorkspace();
+    void detectIde();
+    void detectTerminal();
+    void detectAgentIde();
     void save();
 
 private:

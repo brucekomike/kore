@@ -21,16 +21,22 @@ public:
     // project path.
     QString ideCommand() const;
     void setIdeCommand(const QString &command);
+    static QStringList detectedIdeCommands();
+    static QString autoDetectIdeCommand();
 
-    // Command used to open a project in a terminal. `%1` is replaced with
+    // Command used to open a project in a CLI. `%1` is replaced with
     // the project path.
     QString terminalCommand() const;
     void setTerminalCommand(const QString &command);
+    static QStringList detectedTerminalCommands();
+    static QString autoDetectTerminalCommand();
 
-    // Command used to open a project in OpenCode desktop. `%1` is replaced
+    // Command used to open a project in an agent IDE. `%1` is replaced
     // with the project path.
     QString openCodeCommand() const;
     void setOpenCodeCommand(const QString &command);
+    static QStringList detectedAgentIdeCommands();
+    static QString autoDetectAgentIdeCommand();
 
     // Records that `path` was just opened, updating its last-opened
     // timestamp and moving it to the front of the recent list.
@@ -43,7 +49,7 @@ public:
     // Returns the list of recently opened project paths, most recent first.
     QStringList recentProjects(int maxCount = 10) const;
 
-    // Platform-appropriate default command for opening a terminal.
+    // Platform-appropriate default command for opening a CLI.
     static QString defaultTerminalCommand();
 
 private:

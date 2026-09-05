@@ -31,9 +31,36 @@ add_executable(kore
     src/MainWindow.cpp
     src/SettingsDialog.h
     src/SettingsDialog.cpp
+    src/resources.qrc
 )
 
+if(APPLE)
+    set_target_properties(kore PROPERTIES
+        MACOSX_BUNDLE TRUE
+        MACOSX_BUNDLE_BUNDLE_NAME "kore"
+        MACOSX_BUNDLE_GUI_IDENTIFIER "com.kore.workspace"
+        MACOSX_BUNDLE_BUNDLE_VERSION "${PROJECT_VERSION}"
+        MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}"
+    )
+endif()
+
 target_link_libraries(kore PRIVATE kore_core Qt${QT_VERSION_MAJOR}::Widgets)
+
+include(GNUInstallDirs)
+install(TARGETS kore
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    BUNDLE DESTINATION .
+)
+
+if(UNIX AND NOT APPLE)
+    install(FILES packaging/kore.desktop
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/applications
+    )
+    install(FILES icon.svg
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps
+        RENAME kore.svg
+    )
+endif()
 
 enable_testing()
 add_subdirectory(tests)

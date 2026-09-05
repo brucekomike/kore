@@ -18,8 +18,8 @@ custom folder of your choosing).
 - Repo basics at a glance: on-disk size, last update time (last commit time
   for git repositories, otherwise the most recent file modification), and
   last opened time.
-- Click (or right-click) a project to open it in your configured IDE,
-  terminal, or OpenCode desktop. All three commands are configurable via
+- Each project card has buttons to open it in your configured IDE, CLI, or
+  agent IDE. All three commands are configurable via
   **Settings**.
 
 ## Building
@@ -32,6 +32,12 @@ cmake -B build -S .
 cmake --build build
 ```
 
+Or use the quick-build helper:
+
+```sh
+./bin/build
+```
+
 This produces the `kore` executable, plus a `kore_tests` test suite runnable
 via `ctest`:
 
@@ -40,15 +46,23 @@ cd build
 ctest --output-on-failure
 ```
 
+On macOS, the application is generated as `build/kore.app`.
+
+Tagged releases build a Linux package with desktop registration, a macOS DMG,
+and a Windows ZIP containing the compiled executable. The Linux package installs the `kore` desktop entry
+and application icon under the standard XDG directories.
+
 ## Configuration
 
 Open **Settings** from the toolbar to configure:
 
 - The workspace folder (leave empty to auto-detect).
-- The command used to open a project in your IDE, terminal, or OpenCode
-  desktop. Use `%1` as a placeholder for the project path — it is
+- The command used to open a project in your IDE, CLI, or agent IDE. Use `%1`
+  as a placeholder for the project path — it is
   automatically shell-quoted before substitution, so do not wrap it in your
   own quotes, e.g. `code %1`.
+- IDE and agent IDE command templates can be auto-detected from installed
+  applications in **Settings**.
 
 Settings are persisted using Qt's native per-platform storage (the Windows
 registry, macOS preferences, or an INI file under `~/.config` on Linux).

@@ -1,5 +1,7 @@
 #include "AppSettings.h"
 
+#include <QFileInfo>
+#include <QStandardPaths>
 #include <QVariant>
 
 namespace {
@@ -30,7 +32,8 @@ QString AppSettings::ideCommand() const
 {
     // %1 is substituted with a shell-quoted project path by MainWindow, so
     // the template itself should not add its own quoting around %1.
-    return m_settings.value(QLatin1String(kIdeCommandKey), QStringLiteral("code %1")).toString();
+    const QString configured = m_settings.value(QLatin1String(kIdeCommandKey)).toString();
+    return configured.isEmpty() ? autoDetectIdeCommand() : configured;
 }
 
 void AppSettings::setIdeCommand(const QString &command)
@@ -38,9 +41,48 @@ void AppSettings::setIdeCommand(const QString &command)
     m_settings.setValue(QLatin1String(kIdeCommandKey), command);
 }
 
+QString AppSettings::autoDetectIdeCommand()
+{
+    const QStringList detected = detectedIdeCommands();
+    return detected.isEmpty() ? QStringLiteral("code %1") : detected.first();
+}
+
+QStringList AppSettings::detectedIdeCommands()
+{
+    QStringList detected;
+    const QStringList candidates = {
+        QStringLiteral("zed"),
+        QStringLiteral("code"),
+        QStringLiteral("cursor"),
+        QStringLiteral("windsurf")
+    };
+    for (const QString &candidate : candidates) {
+        if (!QStandardPaths::findExecutable(candidate).isEmpty()) {
+            detected.append(candidate + QStringLiteral(" %1"));
+        }
+    }
+#if defined(Q_OS_MAC)
+    const QList<QPair<QString, QString>> applications = {
+        {QStringLiteral("Zed"), QStringLiteral("zed")},
+        {QStringLiteral("Visual Studio Code"), QStringLiteral("code")},
+        {QStringLiteral("Cursor"), QStringLiteral("cursor")},
+    };
+    for (const auto &application : applications) {
+        if (QFileInfo::exists(QStringLiteral("/Applications/%1.app").arg(application.first))) {
+            const QString command = QStringLiteral("open -a \"%1\" %2").arg(application.first, QStringLiteral("%1"));
+            if (!detected.contains(command)) {
+                detected.append(command);
+            }
+        }
+    }
+#endif
+    return detected;
+}
+
 QString AppSettings::terminalCommand() const
 {
-    return m_settings.value(QLatin1String(kTerminalCommandKey), defaultTerminalCommand()).toString();
+    const QString configured = m_settings.value(QLatin1String(kTerminalCommandKey)).toString();
+    return configured.isEmpty() ? autoDetectTerminalCommand() : configured;
 }
 
 void AppSettings::setTerminalCommand(const QString &command)
@@ -48,14 +90,82 @@ void AppSettings::setTerminalCommand(const QString &command)
     m_settings.setValue(QLatin1String(kTerminalCommandKey), command);
 }
 
+QString AppSettings::autoDetectTerminalCommand()
+{
+    const QStringList detected = detectedTerminalCommands();
+    return detected.isEmpty() ? defaultTerminalCommand() : detected.first();
+}
+
+QStringList AppSettings::detectedTerminalCommands()
+{
+    QStringList detected;
+#if defined(Q_OS_WIN)
+    if (!QStandardPaths::findExecutable(QStringLiteral("wt")).isEmpty()) {
+        detected.append(QStringLiteral("wt -d %1"));
+    }
+    detected.append(QStringLiteral("cmd /K cd /d %1"));
+#elif defined(Q_OS_MAC)
+    if (QFileInfo::exists(QStringLiteral("/Applications/iTerm.app"))) {
+        detected.append(QStringLiteral("open -a iTerm %1"));
+    }
+    detected.append(QStringLiteral("open -a Terminal %1"));
+#else
+    const QList<QString> terminals = {
+        QStringLiteral("x-terminal-emulator"),
+        QStringLiteral("gnome-terminal"),
+        QStringLiteral("konsole"),
+        QStringLiteral("kitty")
+    };
+    for (const QString &terminal : terminals) {
+        if (!QStandardPaths::findExecutable(terminal).isEmpty()) {
+            if (terminal == QStringLiteral("gnome-terminal")) {
+                detected.append(terminal + QStringLiteral(" --working-directory=%1"));
+                continue;
+            }
+            if (terminal == QStringLiteral("konsole")) {
+                detected.append(terminal + QStringLiteral(" --workdir %1"));
+                continue;
+            }
+            if (terminal == QStringLiteral("kitty")) {
+                detected.append(terminal + QStringLiteral(" --directory %1"));
+                continue;
+            }
+            detected.append(terminal + QStringLiteral(" --working-directory=%1"));
+        }
+    }
+#endif
+    return detected;
+}
+
 QString AppSettings::openCodeCommand() const
 {
-    return m_settings.value(QLatin1String(kOpenCodeCommandKey), QStringLiteral("opencode %1")).toString();
+    const QString configured = m_settings.value(QLatin1String(kOpenCodeCommandKey)).toString();
+    return configured.isEmpty() ? autoDetectAgentIdeCommand() : configured;
 }
 
 void AppSettings::setOpenCodeCommand(const QString &command)
 {
     m_settings.setValue(QLatin1String(kOpenCodeCommandKey), command);
+}
+
+QString AppSettings::autoDetectAgentIdeCommand()
+{
+    const QStringList detected = detectedAgentIdeCommands();
+    return detected.isEmpty() ? QStringLiteral("opencode %1") : detected.first();
+}
+
+QStringList AppSettings::detectedAgentIdeCommands()
+{
+    QStringList detected;
+    if (!QStandardPaths::findExecutable(QStringLiteral("opencode")).isEmpty()) {
+        detected.append(QStringLiteral("opencode %1"));
+    }
+#if defined(Q_OS_MAC)
+    if (QFileInfo::exists(QStringLiteral("/Applications/OpenCode.app"))) {
+        detected.append(QStringLiteral("open -a OpenCode %1"));
+    }
+#endif
+    return detected;
 }
 
 QString AppSettings::defaultTerminalCommand()

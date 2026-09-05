@@ -4,18 +4,24 @@
 #include "WorkspaceResolver.h"
 
 #include <QAction>
+#include <QFrame>
 #include <QFont>
-#include <QHeaderView>
+#include <QGroupBox>
+#include <QHBoxLayout>
+#include <QDir>
+#include <QKeySequence>
 #include <QLabel>
 #include <QListWidget>
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QProcess>
+#include <QScrollArea>
+#include <QSizePolicy>
 #include <QSplitter>
 #include <QStatusBar>
 #include <QToolBar>
-#include <QTreeWidget>
+#include <QPushButton>
 #include <QVBoxLayout>
 #include <QWidget>
 
@@ -37,29 +43,63 @@ void MainWindow::buildUi()
 
     auto *splitter = new QSplitter(Qt::Horizontal, this);
 
-    m_tree = new QTreeWidget(splitter);
-    m_tree->setColumnCount(4);
-    m_tree->setHeaderLabels({tr("Project"), tr("Size"), tr("Last Update"), tr("Last Opened")});
-    m_tree->header()->setSectionResizeMode(0, QHeaderView::Stretch);
-    m_tree->setContextMenuPolicy(Qt::CustomContextMenu);
-    m_tree->setAlternatingRowColors(true);
-    connect(m_tree, &QTreeWidget::customContextMenuRequested, this, &MainWindow::showProjectContextMenu);
-    connect(m_tree, &QTreeWidget::itemDoubleClicked, this, &MainWindow::openInIde);
+    auto *projectPanel = new QWidget(splitter);
+    auto *projectPanelLayout = new QVBoxLayout(projectPanel);
+    auto *projectsTitle = new QLabel(tr("Projects"), projectPanel);
+    QFont projectsTitleFont = projectsTitle->font();
+    projectsTitleFont.setBold(true);
+    projectsTitle->setFont(projectsTitleFont);
+    projectPanelLayout->addWidget(projectsTitle);
 
-    m_recentList = new QListWidget(splitter);
+    m_projectScroll = new QScrollArea(projectPanel);
+    m_projectScroll->setWidgetResizable(true);
+    m_projectScroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    m_projectCards = new QWidget(m_projectScroll);
+    m_projectLayout = new QVBoxLayout(m_projectCards);
+    m_projectLayout->setContentsMargins(8, 8, 8, 8);
+    m_projectLayout->setSpacing(10);
+    m_projectLayout->addStretch();
+    m_projectScroll->setWidget(m_projectCards);
+    projectPanelLayout->addWidget(m_projectScroll, 1);
+
+    auto *rightPanel = new QWidget(splitter);
+    auto *rightLayout = new QVBoxLayout(rightPanel);
+    auto *contentsTitle = new QLabel(tr("Contents"), rightPanel);
+    QFont contentsTitleFont = contentsTitle->font();
+    contentsTitleFont.setBold(true);
+    contentsTitle->setFont(contentsTitleFont);
+    rightLayout->addWidget(contentsTitle);
+
+    m_groupIndex = new QListWidget(rightPanel);
+    connect(m_groupIndex, &QListWidget::itemClicked, this, &MainWindow::navigateToGroup);
+    rightLayout->addWidget(m_groupIndex, 1);
+
+    auto *recentTitle = new QLabel(tr("Recently Opened"), rightPanel);
+    QFont recentTitleFont = recentTitle->font();
+    recentTitleFont.setBold(true);
+    recentTitle->setFont(recentTitleFont);
+    rightLayout->addWidget(recentTitle);
+
+    m_recentList = new QListWidget(rightPanel);
+    m_recentList->setMaximumHeight(5 * m_recentList->fontMetrics().lineSpacing()
+                                   + 2 * m_recentList->frameWidth() + 16);
     m_recentList->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(m_recentList, &QListWidget::customContextMenuRequested, this, &MainWindow::showRecentContextMenu);
     connect(m_recentList, &QListWidget::itemDoubleClicked, this, &MainWindow::openInIde);
 
-    splitter->addWidget(m_tree);
-    splitter->addWidget(m_recentList);
+    rightLayout->addWidget(m_recentList, 1);
+
+    splitter->addWidget(projectPanel);
+    splitter->addWidget(rightPanel);
     splitter->setStretchFactor(0, 3);
     splitter->setStretchFactor(1, 1);
+    splitter->setSizes({700, 260});
 
     setCentralWidget(splitter);
 
     QToolBar *toolBar = addToolBar(tr("Main"));
     QAction *refreshAction = toolBar->addAction(tr("Refresh"));
+    refreshAction->setShortcut(QKeySequence::Refresh);
     connect(refreshAction, &QAction::triggered, this, &MainWindow::refresh);
     QAction *settingsAction = toolBar->addAction(tr("Settings"));
     connect(settingsAction, &QAction::triggered, this, &MainWindow::openSettingsDialog);
@@ -86,11 +126,79 @@ void MainWindow::refresh()
     populateRecentList();
 }
 
+QFrame *MainWindow::makeProjectCard(const ProjectInfo &info)
+{
+    auto *card = new QFrame(m_projectCards);
+    card->setFrameShape(QFrame::StyledPanel);
+    card->setFrameShadow(QFrame::Raised);
+    card->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+
+    auto *layout = new QHBoxLayout(card);
+    layout->setContentsMargins(12, 10, 8, 10);
+
+    auto *details = new QVBoxLayout;
+    const QString relativePath = QDir(m_workspaceRoot).relativeFilePath(info.path);
+    auto *titleRow = new QHBoxLayout;
+    auto *pathLabel = new QLabel(relativePath, card);
+    pathLabel->setWordWrap(false);
+    pathLabel->setMinimumWidth(0);
+    pathLabel->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+    pathLabel->setText(QFontMetrics(pathLabel->font()).elidedText(relativePath, Qt::ElideRight, 220));
+    pathLabel->setToolTip(info.path);
+    pathLabel->setStyleSheet(QStringLiteral("color: palette(text);"));
+
+    auto *name = new QLabel(info.name, card);
+    QFont nameFont = name->font();
+    nameFont.setBold(true);
+    name->setFont(nameFont);
+    name->setMinimumWidth(40);
+    name->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
+    name->setText(QFontMetrics(name->font()).elidedText(info.name, Qt::ElideRight, 220));
+    name->setToolTip(info.name);
+    titleRow->addWidget(name, 0);
+    titleRow->addWidget(pathLabel, 1);
+    details->addLayout(titleRow);
+
+    const QString metadataText = tr("Size: %1    Modified: %2    Opened: %3")
+            .arg(formatSize(info.sizeBytes))
+            .arg(formatTimestamp(info.lastUpdateTime))
+            .arg(formatTimestamp(info.lastOpenTime));
+    auto *metadata = new QLabel(metadataText, card);
+    metadata->setWordWrap(false);
+    metadata->setMinimumWidth(0);
+    metadata->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+    metadata->setText(QFontMetrics(metadata->font()).elidedText(metadataText, Qt::ElideRight, 420));
+    metadata->setToolTip(metadataText);
+    metadata->setStyleSheet(QStringLiteral("color: palette(text);"));
+    details->addWidget(metadata);
+    layout->addLayout(details, 1);
+
+    auto *openActions = new QHBoxLayout;
+    openActions->setSpacing(4);
+    auto addOpenButton = [this, &openActions, &info](const QString &label, auto slot) {
+        auto *button = new QPushButton(label, m_projectCards);
+        button->setFixedHeight(26);
+        button->setFixedWidth(label == tr("Agent IDE") ? 84 : 52);
+        connect(button, &QPushButton::clicked, this, [this, path = info.path, slot] {
+            m_selectedProjectPath = path;
+            (this->*slot)();
+        });
+        openActions->addWidget(button);
+    };
+    addOpenButton(tr("IDE"), &MainWindow::openInIde);
+    addOpenButton(tr("CLI"), &MainWindow::openInTerminal);
+    addOpenButton(tr("Agent IDE"), &MainWindow::openInOpenCode);
+    layout->addLayout(openActions, 0);
+    return card;
+}
+
 void MainWindow::populateProjectTree()
 {
-    m_tree->clear();
-
-    QHash<QString, QTreeWidgetItem *> groupItems;
+    while (m_projectLayout->count() > 1) {
+        delete m_projectLayout->takeAt(0)->widget();
+    }
+    m_groupCards.clear();
+    m_groupIndex->clear();
 
     // Ensure groups are created in a stable, alphabetical order.
     QStringList groupNames;
@@ -100,32 +208,44 @@ void MainWindow::populateProjectTree()
         }
     }
     groupNames.sort(Qt::CaseInsensitive);
+
     for (const QString &group : groupNames) {
-        auto *groupItem = new QTreeWidgetItem(m_tree, {group});
-        QFont font = groupItem->font(0);
-        font.setBold(true);
-        groupItem->setFont(0, font);
-        groupItems.insert(group, groupItem);
+        auto *groupBox = new QGroupBox(group, m_projectCards);
+        groupBox->setStyleSheet(QStringLiteral("QGroupBox { color: palette(text); }"));
+        auto *groupLayout = new QVBoxLayout(groupBox);
+        groupLayout->setSpacing(8);
+        for (const ProjectInfo &info : m_projectsByPath) {
+            if (info.group == group) {
+                groupLayout->addWidget(makeProjectCard(info));
+            }
+        }
+        m_projectLayout->insertWidget(m_projectLayout->count() - 1, groupBox);
+        m_groupCards.insert(group, groupBox);
+        auto *indexItem = new QListWidgetItem(group, m_groupIndex);
+        indexItem->setToolTip(tr("Jump to %1").arg(group));
     }
 
     for (const ProjectInfo &info : m_projectsByPath) {
-        QTreeWidgetItem *parentItem = info.group.isEmpty() ? m_tree->invisibleRootItem() : groupItems.value(info.group);
-        auto *item = new QTreeWidgetItem(parentItem);
-        item->setText(0, info.name);
-        item->setText(1, formatSize(info.sizeBytes));
-        item->setText(2, formatTimestamp(info.lastUpdateTime));
-        item->setText(3, formatTimestamp(info.lastOpenTime));
-        item->setData(0, kPathDataRole, info.path);
-        item->setToolTip(0, info.path);
+        if (info.group.isEmpty()) {
+            m_projectLayout->insertWidget(m_projectLayout->count() - 1, makeProjectCard(info));
+        }
     }
+}
 
-    m_tree->expandAll();
+void MainWindow::navigateToGroup(QListWidgetItem *item)
+{
+    if (!item || !m_projectScroll) {
+        return;
+    }
+    if (QWidget *groupCard = m_groupCards.value(item->text())) {
+        m_projectScroll->ensureWidgetVisible(groupCard, 0, 8);
+    }
 }
 
 void MainWindow::populateRecentList()
 {
     m_recentList->clear();
-    const QStringList recent = m_settings.recentProjects();
+    const QStringList recent = m_settings.recentProjects(5);
     for (const QString &path : recent) {
         const ProjectInfo info = m_projectsByPath.value(path);
         const QString label = info.name.isEmpty() ? path : info.name;
@@ -140,12 +260,8 @@ QString MainWindow::selectedProjectPath() const
     if (m_recentList->hasFocus() && m_recentList->currentItem()) {
         return m_recentList->currentItem()->data(kPathDataRole).toString();
     }
-    if (m_tree->currentItem()) {
-        const QString path = m_tree->currentItem()->data(0, kPathDataRole).toString();
-        if (!path.isEmpty()) {
-            // Only leaf project items carry a path; group headers do not.
-            return path;
-        }
+    if (!m_selectedProjectPath.isEmpty()) {
+        return m_selectedProjectPath;
     }
     if (m_recentList->currentItem()) {
         return m_recentList->currentItem()->data(kPathDataRole).toString();
@@ -187,21 +303,6 @@ void MainWindow::openInOpenCode()
     openProjectWithCommand(selectedProjectPath(), m_settings.openCodeCommand());
 }
 
-void MainWindow::showProjectContextMenu(const QPoint &pos)
-{
-    QTreeWidgetItem *item = m_tree->itemAt(pos);
-    if (!item || item->data(0, kPathDataRole).toString().isEmpty()) {
-        return;
-    }
-    m_tree->setCurrentItem(item);
-
-    QMenu menu(this);
-    menu.addAction(tr("Open in IDE"), this, &MainWindow::openInIde);
-    menu.addAction(tr("Open in Terminal"), this, &MainWindow::openInTerminal);
-    menu.addAction(tr("Open in OpenCode"), this, &MainWindow::openInOpenCode);
-    menu.exec(m_tree->viewport()->mapToGlobal(pos));
-}
-
 void MainWindow::showRecentContextMenu(const QPoint &pos)
 {
     QListWidgetItem *item = m_recentList->itemAt(pos);
@@ -212,8 +313,8 @@ void MainWindow::showRecentContextMenu(const QPoint &pos)
 
     QMenu menu(this);
     menu.addAction(tr("Open in IDE"), this, &MainWindow::openInIde);
-    menu.addAction(tr("Open in Terminal"), this, &MainWindow::openInTerminal);
-    menu.addAction(tr("Open in OpenCode"), this, &MainWindow::openInOpenCode);
+    menu.addAction(tr("Open in CLI"), this, &MainWindow::openInTerminal);
+    menu.addAction(tr("Open in Agent IDE"), this, &MainWindow::openInOpenCode);
     menu.exec(m_recentList->viewport()->mapToGlobal(pos));
 }
 
@@ -248,7 +349,7 @@ QString MainWindow::formatTimestamp(const QDateTime &dt)
     if (!dt.isValid()) {
         return tr("never");
     }
-    return dt.toString(Qt::ISODate);
+    return dt.toString(QStringLiteral("yyyy-MM-dd HH:mm"));
 }
 
 QString MainWindow::shellQuote(const QString &path)
