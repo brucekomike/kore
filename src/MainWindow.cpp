@@ -141,7 +141,11 @@ QString MainWindow::selectedProjectPath() const
         return m_recentList->currentItem()->data(kPathDataRole).toString();
     }
     if (m_tree->currentItem()) {
-        return m_tree->currentItem()->data(0, kPathDataRole).toString();
+        const QString path = m_tree->currentItem()->data(0, kPathDataRole).toString();
+        if (!path.isEmpty()) {
+            // Only leaf project items carry a path; group headers do not.
+            return path;
+        }
     }
     if (m_recentList->currentItem()) {
         return m_recentList->currentItem()->data(kPathDataRole).toString();

@@ -2,9 +2,36 @@
 
 #include <QDateTime>
 #include <QDir>
-#include <QDirIterator>
 #include <QFileInfo>
 #include <QProcess>
+
+namespace {
+
+// Walks `path` recursively, skipping the contents of any `.git` directory
+// (which can be large and are not relevant to the user-visible size/activity
+// of a project), accumulating the total file size and the most recent
+// modification time seen.
+void walkDirectory(const QString &path, qint64 &totalSize, QDateTime &latestModified)
+{
+    QDir dir(path);
+    const QFileInfoList entries = dir.entryInfoList(QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot | QDir::Hidden | QDir::System);
+    for (const QFileInfo &entry : entries) {
+        if (entry.isDir()) {
+            if (entry.fileName() == QLatin1String(".git")) {
+                continue;
+            }
+            walkDirectory(entry.absoluteFilePath(), totalSize, latestModified);
+            continue;
+        }
+        totalSize += entry.size();
+        const QDateTime modified = entry.lastModified();
+        if (modified.isValid() && modified > latestModified) {
+            latestModified = modified;
+        }
+    }
+}
+
+} // namespace
 
 bool ProjectScanner::isGitRepository(const QString &path)
 {
@@ -14,11 +41,8 @@ bool ProjectScanner::isGitRepository(const QString &path)
 qint64 ProjectScanner::directorySize(const QString &path)
 {
     qint64 total = 0;
-    QDirIterator it(path, QDir::Files | QDir::Hidden | QDir::System, QDirIterator::Subdirectories);
-    while (it.hasNext()) {
-        it.next();
-        total += it.fileInfo().size();
-    }
+    QDateTime latest;
+    walkDirectory(path, total, latest);
     return total;
 }
 
@@ -42,15 +66,9 @@ QDateTime ProjectScanner::lastCommitTime(const QString &path)
 
 QDateTime ProjectScanner::lastModifiedRecursive(const QString &path)
 {
+    qint64 total = 0;
     QDateTime latest = QFileInfo(path).lastModified();
-    QDirIterator it(path, QDir::Files | QDir::Hidden | QDir::System, QDirIterator::Subdirectories);
-    while (it.hasNext()) {
-        it.next();
-        const QDateTime modified = it.fileInfo().lastModified();
-        if (modified.isValid() && modified > latest) {
-            latest = modified;
-        }
-    }
+    walkDirectory(path, total, latest);
     return latest;
 }
 

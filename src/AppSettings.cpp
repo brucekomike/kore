@@ -1,5 +1,7 @@
 #include "AppSettings.h"
 
+#include <QVariant>
+
 namespace {
 const char *kWorkspaceKey = "workspace/override";
 const char *kIdeCommandKey = "commands/ide";
@@ -67,16 +69,18 @@ QString AppSettings::defaultTerminalCommand()
 
 void AppSettings::recordOpened(const QString &path)
 {
-    QStringList entries = m_settings.value(QLatin1String(kRecentKey)).toStringList();
+    QVariantList entries = m_settings.value(QLatin1String(kRecentKey)).toList();
 
     // Remove any existing entry for this path.
     for (int i = entries.size() - 1; i >= 0; --i) {
-        if (entries.at(i).section(QLatin1Char('|'), 0, 0) == path) {
+        if (entries.at(i).toMap().value(QStringLiteral("path")).toString() == path) {
             entries.removeAt(i);
         }
     }
 
-    const QString entry = path + QLatin1Char('|') + QDateTime::currentDateTime().toString(Qt::ISODate);
+    QVariantMap entry;
+    entry.insert(QStringLiteral("path"), path);
+    entry.insert(QStringLiteral("time"), QDateTime::currentDateTime().toString(Qt::ISODate));
     entries.prepend(entry);
 
     while (entries.size() > kMaxStoredRecent) {
@@ -88,10 +92,11 @@ void AppSettings::recordOpened(const QString &path)
 
 QDateTime AppSettings::lastOpenTime(const QString &path) const
 {
-    const QStringList entries = m_settings.value(QLatin1String(kRecentKey)).toStringList();
-    for (const QString &entry : entries) {
-        if (entry.section(QLatin1Char('|'), 0, 0) == path) {
-            return QDateTime::fromString(entry.section(QLatin1Char('|'), 1, 1), Qt::ISODate);
+    const QVariantList entries = m_settings.value(QLatin1String(kRecentKey)).toList();
+    for (const QVariant &entry : entries) {
+        const QVariantMap map = entry.toMap();
+        if (map.value(QStringLiteral("path")).toString() == path) {
+            return QDateTime::fromString(map.value(QStringLiteral("time")).toString(), Qt::ISODate);
         }
     }
     return QDateTime();
@@ -99,10 +104,14 @@ QDateTime AppSettings::lastOpenTime(const QString &path) const
 
 QStringList AppSettings::recentProjects(int maxCount) const
 {
-    const QStringList entries = m_settings.value(QLatin1String(kRecentKey)).toStringList();
     QStringList paths;
-    for (const QString &entry : entries) {
-        paths.append(entry.section(QLatin1Char('|'), 0, 0));
+    if (maxCount <= 0) {
+        return paths;
+    }
+
+    const QVariantList entries = m_settings.value(QLatin1String(kRecentKey)).toList();
+    for (const QVariant &entry : entries) {
+        paths.append(entry.toMap().value(QStringLiteral("path")).toString());
         if (paths.size() >= maxCount) {
             break;
         }
