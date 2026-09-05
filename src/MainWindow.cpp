@@ -17,6 +17,7 @@
 #include <QMessageBox>
 #include <QProcess>
 #include <QScrollArea>
+#include <QScrollBar>
 #include <QSizePolicy>
 #include <QSplitter>
 #include <QStatusBar>
@@ -145,7 +146,6 @@ QFrame *MainWindow::makeProjectCard(const ProjectInfo &info)
     pathLabel->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
     pathLabel->setText(QFontMetrics(pathLabel->font()).elidedText(relativePath, Qt::ElideRight, 220));
     pathLabel->setToolTip(info.path);
-    pathLabel->setStyleSheet(QStringLiteral("color: palette(text);"));
 
     auto *name = new QLabel(info.name, card);
     QFont nameFont = name->font();
@@ -169,7 +169,6 @@ QFrame *MainWindow::makeProjectCard(const ProjectInfo &info)
     metadata->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
     metadata->setText(QFontMetrics(metadata->font()).elidedText(metadataText, Qt::ElideRight, 420));
     metadata->setToolTip(metadataText);
-    metadata->setStyleSheet(QStringLiteral("color: palette(text);"));
     details->addWidget(metadata);
     layout->addLayout(details, 1);
 
@@ -211,7 +210,6 @@ void MainWindow::populateProjectTree()
 
     for (const QString &group : groupNames) {
         auto *groupBox = new QGroupBox(group, m_projectCards);
-        groupBox->setStyleSheet(QStringLiteral("QGroupBox { color: palette(text); }"));
         auto *groupLayout = new QVBoxLayout(groupBox);
         groupLayout->setSpacing(8);
         for (const ProjectInfo &info : m_projectsByPath) {
@@ -238,7 +236,7 @@ void MainWindow::navigateToGroup(QListWidgetItem *item)
         return;
     }
     if (QWidget *groupCard = m_groupCards.value(item->text())) {
-        m_projectScroll->ensureWidgetVisible(groupCard, 0, 8);
+        m_projectScroll->verticalScrollBar()->setValue(qMax(0, groupCard->geometry().top() - 8));
     }
 }
 

@@ -35,8 +35,13 @@ add_executable(kore
 )
 
 if(APPLE)
+    set_source_files_properties(icon.svg PROPERTIES
+        MACOSX_PACKAGE_LOCATION Resources
+    )
+    target_sources(kore PRIVATE icon.svg)
     set_target_properties(kore PROPERTIES
         MACOSX_BUNDLE TRUE
+        MACOSX_BUNDLE_ICON_FILE "icon.svg"
         MACOSX_BUNDLE_BUNDLE_NAME "kore"
         MACOSX_BUNDLE_GUI_IDENTIFIER "com.kore.workspace"
         MACOSX_BUNDLE_BUNDLE_VERSION "${PROJECT_VERSION}"
