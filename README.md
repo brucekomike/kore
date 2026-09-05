@@ -66,3 +66,6 @@ Open **Settings** from the toolbar to configure:
 
 Settings are persisted using Qt's native per-platform storage (the Windows
 registry, macOS preferences, or an INI file under `~/.config` on Linux).
+Recent history is stored in the same application settings. Individual recent
+projects can be removed from the context menu, or the full history can be
+cleared from **Settings**.

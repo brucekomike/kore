@@ -48,6 +48,8 @@ public:
 
     // Returns the list of recently opened project paths, most recent first.
     QStringList recentProjects(int maxCount = 10) const;
+    void removeRecentProject(const QString &path);
+    void clearRecentProjects();
 
     // Platform-appropriate default command for opening a CLI.
     static QString defaultTerminalCommand();

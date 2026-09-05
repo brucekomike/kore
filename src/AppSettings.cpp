@@ -230,3 +230,19 @@ QStringList AppSettings::recentProjects(int maxCount) const
     }
     return paths;
 }
+
+void AppSettings::removeRecentProject(const QString &path)
+{
+    QVariantList entries = m_settings.value(QLatin1String(kRecentKey)).toList();
+    for (int i = entries.size() - 1; i >= 0; --i) {
+        if (entries.at(i).toMap().value(QStringLiteral("path")).toString() == path) {
+            entries.removeAt(i);
+        }
+    }
+    m_settings.setValue(QLatin1String(kRecentKey), entries);
+}
+
+void AppSettings::clearRecentProjects()
+{
+    m_settings.remove(QLatin1String(kRecentKey));
+}

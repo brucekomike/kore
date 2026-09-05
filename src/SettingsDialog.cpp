@@ -8,6 +8,7 @@
 #include <QInputDialog>
 #include <QLabel>
 #include <QLineEdit>
+#include <QMessageBox>
 #include <QPushButton>
 #include <QVBoxLayout>
 
@@ -59,6 +60,10 @@ SettingsDialog::SettingsDialog(AppSettings *settings, QWidget *parent)
     layout->addLayout(form);
     layout->addWidget(new QLabel(tr("Use %1 as a placeholder for the project path; it is automatically shell-quoted, so do not add your own quotes around it.").arg(QStringLiteral("%1")), this));
 
+    auto *clearHistoryButton = new QPushButton(tr("Clear Recent History"), this);
+    connect(clearHistoryButton, &QPushButton::clicked, this, &SettingsDialog::clearRecentHistory);
+    layout->addWidget(clearHistoryButton);
+
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
     connect(buttons, &QDialogButtonBox::accepted, this, &SettingsDialog::save);
     connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
@@ -103,6 +108,15 @@ void SettingsDialog::detectAgentIde()
                                                   AppSettings::detectedAgentIdeCommands(), 0, false, &accepted);
     if (accepted && !choice.isEmpty()) {
         m_openCodeEdit->setText(choice);
+    }
+}
+
+void SettingsDialog::clearRecentHistory()
+{
+    if (QMessageBox::question(this, tr("Clear Recent History"),
+                              tr("Remove all recently opened projects?"),
+                              QMessageBox::Yes | QMessageBox::No) == QMessageBox::Yes) {
+        m_settings->clearRecentProjects();
     }
 }
 

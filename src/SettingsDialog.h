@@ -23,6 +23,7 @@ private slots:
     void detectIde();
     void detectTerminal();
     void detectAgentIde();
+    void clearRecentHistory();
     void save();
 
 private:

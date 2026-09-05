@@ -30,6 +30,7 @@ private slots:
     void openSettingsDialog();
     void navigateToGroup(QListWidgetItem *item);
     void showRecentContextMenu(const QPoint &pos);
+    void removeRecentProject();
     void openInIde();
     void openInTerminal();
     void openInOpenCode();

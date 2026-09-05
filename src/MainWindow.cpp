@@ -103,6 +103,11 @@ void MainWindow::buildUi()
     refreshAction->setShortcut(QKeySequence::Refresh);
     connect(refreshAction, &QAction::triggered, this, &MainWindow::refresh);
     QAction *settingsAction = toolBar->addAction(tr("Settings"));
+#if defined(Q_OS_MAC)
+    settingsAction->setShortcut(QKeySequence(Qt::META | Qt::Key_Comma));
+#else
+    settingsAction->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_Comma));
+#endif
     connect(settingsAction, &QAction::triggered, this, &MainWindow::openSettingsDialog);
 
     m_statusLabel = new QLabel(this);
@@ -313,7 +318,18 @@ void MainWindow::showRecentContextMenu(const QPoint &pos)
     menu.addAction(tr("Open in IDE"), this, &MainWindow::openInIde);
     menu.addAction(tr("Open in CLI"), this, &MainWindow::openInTerminal);
     menu.addAction(tr("Open in Agent IDE"), this, &MainWindow::openInOpenCode);
+    menu.addSeparator();
+    menu.addAction(tr("Remove from Recent"), this, &MainWindow::removeRecentProject);
     menu.exec(m_recentList->viewport()->mapToGlobal(pos));
+}
+
+void MainWindow::removeRecentProject()
+{
+    if (!m_recentList->currentItem()) {
+        return;
+    }
+    m_settings.removeRecentProject(m_recentList->currentItem()->data(kPathDataRole).toString());
+    populateRecentList();
 }
 
 void MainWindow::openSettingsDialog()
