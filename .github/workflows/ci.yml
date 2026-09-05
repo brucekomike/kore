@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  ubuntu:
+    name: Ubuntu
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes cmake g++ qt6-base-dev qt6-base-dev-tools
+      - name: Build
+        run: cmake -B build -S . && cmake --build build
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
+  debian:
+    name: Debian
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and test in Debian
+        run: |
+          docker run --rm \
+            --volume "$GITHUB_WORKSPACE:/src" \
+            --workdir /src \
+            debian:12 \
+            bash -euxo pipefail -c '
+              apt-get update
+              apt-get install --yes cmake g++ qt6-base-dev qt6-base-dev-tools
+              cmake -B build -S .
+              cmake --build build
+              ctest --test-dir build --output-on-failure
+            '
+
+  windows:
+    name: Windows
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: 6.8.3
+          arch: win64_msvc2022_64
+      - name: Build
+        run: cmake -B build -S .; cmake --build build --config Release
+      - name: Test
+        run: ctest --test-dir build -C Release --output-on-failure
+
+  macos:
+    name: macOS
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Qt
+        run: brew install qt
+      - name: Build
+        run: cmake -B build -S . -DCMAKE_PREFIX_PATH="$(brew --prefix qt)" && cmake --build build
+      - name: Test
+        run: ctest --test-dir build --output-on-failure

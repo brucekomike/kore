@@ -25,7 +25,7 @@ custom folder of your choosing).
 ## Building
 
 Requirements: CMake >= 3.16, a C++17 compiler, and Qt 6 (Widgets + Test
-modules) — Qt 5.15+ also works.
+modules).
 
 ```sh
 cmake -B build -S .
