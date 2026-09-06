@@ -37,7 +37,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install Qt
-        run: brew install qt
+        run: brew install qt svg2png
+      - name: Generate macOS icon
+        run: ./packaging/generate-icns.sh
       - name: Build
         run: cmake -B build -S . -DCMAKE_PREFIX_PATH="$(brew --prefix qt)" && cmake --build build --config Release
       - name: Test

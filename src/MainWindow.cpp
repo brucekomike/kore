@@ -9,6 +9,10 @@
 #include <QGroupBox>
 #include <QHBoxLayout>
 #include <QDir>
+#include <QDesktopServices>
+#include <QColor>
+#include <QEvent>
+#include <QIcon>
 #include <QKeySequence>
 #include <QLabel>
 #include <QListWidget>
@@ -23,8 +27,11 @@
 #include <QStatusBar>
 #include <QToolBar>
 #include <QPushButton>
+#include <QPalette>
+#include <QToolButton>
 #include <QVBoxLayout>
 #include <QWidget>
+#include <QUrl>
 
 namespace {
 constexpr int kPathDataRole = Qt::UserRole + 1;
@@ -35,6 +42,14 @@ MainWindow::MainWindow(QWidget *parent)
 {
     buildUi();
     refresh();
+}
+
+void MainWindow::changeEvent(QEvent *event)
+{
+    QMainWindow::changeEvent(event);
+    if (event->type() == QEvent::PaletteChange) {
+        updateActionIcons();
+    }
 }
 
 void MainWindow::buildUi()
@@ -100,7 +115,11 @@ void MainWindow::buildUi()
 
     QToolBar *toolBar = addToolBar(tr("Main"));
     QAction *refreshAction = toolBar->addAction(tr("Refresh"));
-    refreshAction->setShortcut(QKeySequence::Refresh);
+#if defined(Q_OS_MAC)
+    refreshAction->setShortcut(QKeySequence(Qt::META | Qt::Key_R));
+#else
+    refreshAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_R));
+#endif
     connect(refreshAction, &QAction::triggered, this, &MainWindow::refresh);
     QAction *settingsAction = toolBar->addAction(tr("Settings"));
 #if defined(Q_OS_MAC)
@@ -162,6 +181,37 @@ QFrame *MainWindow::makeProjectCard(const ProjectInfo &info)
     name->setToolTip(info.name);
     titleRow->addWidget(name, 0);
     titleRow->addWidget(pathLabel, 1);
+
+    auto *openActions = new QHBoxLayout;
+    openActions->setSpacing(2);
+    auto addOpenButton = [this, &openActions, &info](const QString &label,
+                                                     const QString &iconPath,
+                                                     auto slot) {
+        auto *button = new QToolButton(m_projectCards);
+        button->setFixedSize(30, 30);
+        button->setToolButtonStyle(Qt::ToolButtonIconOnly);
+        button->setAutoRaise(true);
+        button->setStyleSheet(QStringLiteral(
+            "QToolButton { border: none; border-radius: 4px; background: transparent; }"
+            "QToolButton:hover { background: palette(alternate-base); }"
+            "QToolButton:pressed { background: palette(midlight); }"));
+        button->setContentsMargins(0, 0, 0, 0);
+        button->setCursor(Qt::PointingHandCursor);
+        button->setIconSize(QSize(30, 30));
+        button->setToolTip(label);
+        button->setAccessibleName(label);
+        m_iconButtons.append({button, iconPath});
+        connect(button, &QPushButton::clicked, this, [this, path = info.path, slot] {
+            m_selectedProjectPath = path;
+            (this->*slot)();
+        });
+        openActions->addWidget(button);
+    };
+    addOpenButton(tr("IDE"), QStringLiteral(":/icons/ide.svg"), &MainWindow::openInIde);
+    addOpenButton(tr("CLI"), QStringLiteral(":/icons/cli.svg"), &MainWindow::openInTerminal);
+    addOpenButton(tr("Agent"), QStringLiteral(":/icons/agent.svg"), &MainWindow::openInOpenCode);
+    addOpenButton(tr("Files"), QStringLiteral(":/icons/files.svg"), &MainWindow::openInFileManager);
+    titleRow->addLayout(openActions, 0);
     details->addLayout(titleRow);
 
     const QString metadataText = tr("Size: %1    Modified: %2    Opened: %3")
@@ -169,35 +219,30 @@ QFrame *MainWindow::makeProjectCard(const ProjectInfo &info)
             .arg(formatTimestamp(info.lastUpdateTime))
             .arg(formatTimestamp(info.lastOpenTime));
     auto *metadata = new QLabel(metadataText, card);
+    QFont metadataFont = metadata->font();
+    metadataFont.setPointSize(qMax(1, metadataFont.pointSize() - 2));
+    metadata->setFont(metadataFont);
+    QPalette metadataPalette = metadata->palette();
+    const QColor windowColor = palette().color(QPalette::Window);
+    const QColor metadataColor = windowColor.lightness() < 128
+                                         ? QColor(180, 180, 180)
+                                         : QColor(90, 90, 90);
+    metadataPalette.setColor(QPalette::WindowText, metadataColor);
+    metadata->setPalette(metadataPalette);
+    metadata->setStyleSheet(QStringLiteral("color: %1;").arg(metadataColor.name()));
     metadata->setWordWrap(false);
     metadata->setMinimumWidth(0);
     metadata->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
-    metadata->setText(QFontMetrics(metadata->font()).elidedText(metadataText, Qt::ElideRight, 420));
+    metadata->setText(metadataText);
     metadata->setToolTip(metadataText);
     details->addWidget(metadata);
     layout->addLayout(details, 1);
-
-    auto *openActions = new QHBoxLayout;
-    openActions->setSpacing(4);
-    auto addOpenButton = [this, &openActions, &info](const QString &label, auto slot) {
-        auto *button = new QPushButton(label, m_projectCards);
-        button->setFixedHeight(26);
-        button->setFixedWidth(label == tr("Agent IDE") ? 84 : 52);
-        connect(button, &QPushButton::clicked, this, [this, path = info.path, slot] {
-            m_selectedProjectPath = path;
-            (this->*slot)();
-        });
-        openActions->addWidget(button);
-    };
-    addOpenButton(tr("IDE"), &MainWindow::openInIde);
-    addOpenButton(tr("CLI"), &MainWindow::openInTerminal);
-    addOpenButton(tr("Agent IDE"), &MainWindow::openInOpenCode);
-    layout->addLayout(openActions, 0);
     return card;
 }
 
 void MainWindow::populateProjectTree()
 {
+    m_iconButtons.clear();
     while (m_projectLayout->count() > 1) {
         delete m_projectLayout->takeAt(0)->widget();
     }
@@ -231,6 +276,22 @@ void MainWindow::populateProjectTree()
     for (const ProjectInfo &info : m_projectsByPath) {
         if (info.group.isEmpty()) {
             m_projectLayout->insertWidget(m_projectLayout->count() - 1, makeProjectCard(info));
+        }
+    }
+    updateActionIcons();
+}
+
+void MainWindow::updateActionIcons()
+{
+    const QColor windowColor = palette().color(QPalette::Window);
+    const bool darkMode = windowColor.lightness() < 128;
+    for (const auto &[button, path] : m_iconButtons) {
+        if (button) {
+            QString iconPath = path;
+            if (darkMode) {
+                iconPath.replace(QStringLiteral(":/icons/"), QStringLiteral(":/icons/dark/"));
+            }
+            button->setIcon(QIcon(iconPath));
         }
     }
 }
@@ -306,6 +367,15 @@ void MainWindow::openInOpenCode()
     openProjectWithCommand(selectedProjectPath(), m_settings.openCodeCommand());
 }
 
+void MainWindow::openInFileManager()
+{
+    const QString path = selectedProjectPath();
+    if (path.isEmpty()) {
+        return;
+    }
+    QDesktopServices::openUrl(QUrl::fromLocalFile(path));
+}
+
 void MainWindow::showRecentContextMenu(const QPoint &pos)
 {
     QListWidgetItem *item = m_recentList->itemAt(pos);
@@ -317,7 +387,8 @@ void MainWindow::showRecentContextMenu(const QPoint &pos)
     QMenu menu(this);
     menu.addAction(tr("Open in IDE"), this, &MainWindow::openInIde);
     menu.addAction(tr("Open in CLI"), this, &MainWindow::openInTerminal);
-    menu.addAction(tr("Open in Agent IDE"), this, &MainWindow::openInOpenCode);
+    menu.addAction(tr("Open in Agent"), this, &MainWindow::openInOpenCode);
+    menu.addAction(tr("Open in File Manager"), this, &MainWindow::openInFileManager);
     menu.addSeparator();
     menu.addAction(tr("Remove from Recent"), this, &MainWindow::removeRecentProject);
     menu.exec(m_recentList->viewport()->mapToGlobal(pos));

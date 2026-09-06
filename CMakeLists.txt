@@ -35,13 +35,20 @@ add_executable(kore
 )
 
 if(APPLE)
-    set_source_files_properties(icon.svg PROPERTIES
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/assets/icons/icon.icns")
+        set(MACOS_ICON_SOURCE assets/icons/icon.icns)
+        set(MACOS_ICON_FILE icon.icns)
+    else()
+        set(MACOS_ICON_SOURCE assets/icons/icon.svg)
+        set(MACOS_ICON_FILE icon.svg)
+    endif()
+    set_source_files_properties(${MACOS_ICON_SOURCE} PROPERTIES
         MACOSX_PACKAGE_LOCATION Resources
     )
-    target_sources(kore PRIVATE icon.svg)
+    target_sources(kore PRIVATE ${MACOS_ICON_SOURCE})
     set_target_properties(kore PROPERTIES
         MACOSX_BUNDLE TRUE
-        MACOSX_BUNDLE_ICON_FILE "icon.svg"
+        MACOSX_BUNDLE_ICON_FILE "${MACOS_ICON_FILE}"
         MACOSX_BUNDLE_BUNDLE_NAME "kore"
         MACOSX_BUNDLE_GUI_IDENTIFIER "com.kore.workspace"
         MACOSX_BUNDLE_BUNDLE_VERSION "${PROJECT_VERSION}"
@@ -61,7 +68,7 @@ if(UNIX AND NOT APPLE)
     install(FILES packaging/kore.desktop
         DESTINATION ${CMAKE_INSTALL_DATADIR}/applications
     )
-    install(FILES icon.svg
+    install(FILES assets/icons/icon.svg
         DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps
         RENAME kore.svg
     )

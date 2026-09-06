@@ -4,6 +4,7 @@
 #include "ProjectInfo.h"
 
 #include <QHash>
+#include <QList>
 #include <QMainWindow>
 
 QT_BEGIN_NAMESPACE
@@ -13,17 +14,22 @@ class QLabel;
 class QFrame;
 class QScrollArea;
 class QVBoxLayout;
+class QToolButton;
+class QEvent;
 QT_END_NAMESPACE
 
 // Main panel window: shows the workspace projects grouped by subfolder, a
 // list of recently opened projects, and actions to open a project in the
-// user's configured IDE, CLI, or agent IDE.
+// user's configured IDE, CLI, agent IDE, or system file manager.
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
 
 public:
     explicit MainWindow(QWidget *parent = nullptr);
+
+protected:
+    void changeEvent(QEvent *event) override;
 
 private slots:
     void refresh();
@@ -34,6 +40,7 @@ private slots:
     void openInIde();
     void openInTerminal();
     void openInOpenCode();
+    void openInFileManager();
 
 private:
     void buildUi();
@@ -42,6 +49,7 @@ private:
     QFrame *makeProjectCard(const ProjectInfo &info);
     QString selectedProjectPath() const;
     void openProjectWithCommand(const QString &path, const QString &commandTemplate);
+    void updateActionIcons();
     static QString formatSize(qint64 bytes);
     static QString formatTimestamp(const QDateTime &dt);
     static QString shellQuote(const QString &path);
@@ -59,4 +67,5 @@ private:
     QHash<QString, QWidget *> m_groupCards;
     QLabel *m_statusLabel = nullptr;
     QString m_selectedProjectPath;
+    QList<QPair<QToolButton *, QString>> m_iconButtons;
 };

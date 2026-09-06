@@ -1,5 +1,13 @@
 <RCC>
     <qresource prefix="/">
-        <file alias="icon.svg">../icon.svg</file>
+        <file alias="icon.svg">../assets/icons/icon.svg</file>
+        <file alias="icons/ide.svg">../assets/icons/ide.svg</file>
+        <file alias="icons/cli.svg">../assets/icons/cli.svg</file>
+        <file alias="icons/agent.svg">../assets/icons/agent.svg</file>
+        <file alias="icons/files.svg">../assets/icons/files.svg</file>
+        <file alias="icons/dark/ide.svg">../assets/icons/dark/ide.svg</file>
+        <file alias="icons/dark/cli.svg">../assets/icons/dark/cli.svg</file>
+        <file alias="icons/dark/agent.svg">../assets/icons/dark/agent.svg</file>
+        <file alias="icons/dark/files.svg">../assets/icons/dark/files.svg</file>
     </qresource>
 </RCC>
