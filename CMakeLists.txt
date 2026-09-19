@@ -74,7 +74,14 @@ install(TARGETS kore
     BUNDLE DESTINATION .
 )
 
-if(WIN32 OR (UNIX AND NOT APPLE))
+if(WIN32)
+    qt_generate_deploy_app_script(
+        TARGET kore
+        OUTPUT_SCRIPT kore_deploy_script
+        NO_TRANSLATIONS
+    )
+    install(SCRIPT ${kore_deploy_script})
+elseif(UNIX AND NOT APPLE AND Qt6_VERSION VERSION_GREATER_EQUAL "6.5.0")
     qt_generate_deploy_app_script(
         TARGET kore
         OUTPUT_SCRIPT kore_deploy_script
