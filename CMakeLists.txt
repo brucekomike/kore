@@ -74,6 +74,15 @@ install(TARGETS kore
     BUNDLE DESTINATION .
 )
 
+if(WIN32 OR (UNIX AND NOT APPLE))
+    qt_generate_deploy_app_script(
+        TARGET kore
+        OUTPUT_SCRIPT kore_deploy_script
+        NO_TRANSLATIONS
+    )
+    install(SCRIPT ${kore_deploy_script})
+endif()
+
 if(UNIX AND NOT APPLE)
     install(FILES packaging/kore.desktop
         DESTINATION ${CMAKE_INSTALL_DATADIR}/applications
