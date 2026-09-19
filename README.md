@@ -49,8 +49,9 @@ ctest --output-on-failure
 On macOS, the application is generated as `build/kore.app`.
 
 Tagged releases build a Linux package with desktop registration, a macOS DMG,
-and a Windows ZIP containing the compiled executable. The Linux package installs the `kore` desktop entry
-and application icon under the standard XDG directories.
+and Windows and Linux archives containing the executable and Qt runtime
+dependencies. The Linux package installs the `kore` desktop entry and
+application icon under the standard XDG directories.
 
 ## Configuration
 

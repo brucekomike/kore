@@ -70,9 +70,12 @@ jobs:
         run: cmake -B build -S .; cmake --build build --config Release
       - name: Test
         run: ctest --test-dir build -C Release --output-on-failure
-      - name: Package executable
+      - name: Install bundled application
         shell: pwsh
-        run: Compress-Archive -Path build/Release/kore.exe -DestinationPath kore-windows.zip
+        run: cmake --install build --prefix staging --config Release
+      - name: Package application
+        shell: pwsh
+        run: Compress-Archive -Path staging/* -DestinationPath kore-windows.zip
       - uses: actions/upload-artifact@v4
         with:
           name: kore-windows
