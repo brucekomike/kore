@@ -72,10 +72,14 @@ jobs:
         run: ctest --test-dir build -C Release --output-on-failure
       - name: Install bundled application
         shell: pwsh
-        run: cmake --install build --prefix staging --config Release
+        run: |
+          $stagingDir = Join-Path $PWD "staging"
+          cmake --install build --prefix $stagingDir --config Release
       - name: Package application
         shell: pwsh
-        run: Compress-Archive -Path staging/* -DestinationPath kore-windows.zip
+        run: |
+          $stagingDir = Join-Path $PWD "staging"
+          Compress-Archive -Path (Join-Path $stagingDir '*') -DestinationPath kore-windows.zip
       - uses: actions/upload-artifact@v4
         with:
           name: kore-windows
