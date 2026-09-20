@@ -13,7 +13,7 @@
 [Setup]
 AppName=kore Portable
 AppVersion={#MyAppVersion}
-DefaultDirName={userdocs}\kore-portable
+DefaultDirName={code:GetDefaultPortableDir}
 OutputDir={#OutputDir}
 OutputBaseFilename=kore-windows-portable
 Compression=lzma
@@ -27,3 +27,9 @@ Uninstallable=no
 
 [Files]
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion
+
+[Code]
+function GetDefaultPortableDir(Param: string): string;
+begin
+  Result := ExpandConstant('{src}\kore-portable');
+end;
