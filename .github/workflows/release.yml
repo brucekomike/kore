@@ -36,7 +36,9 @@ jobs:
             --icon-file AppDir/usr/share/icons/hicolor/scalable/apps/kore.svg \
             --plugin qt \
             --output appimage
-          mv ./*-x86_64.AppImage kore-linux-x86_64.AppImage
+          app_image="$(find . -maxdepth 1 -type f -name '*-x86_64.AppImage' ! -name 'linuxdeploy*.AppImage' | head -n 1)"
+          test -n "$app_image"
+          mv "$app_image" kore-linux-x86_64.AppImage
       - uses: actions/upload-artifact@v4
         with:
           name: kore-linux
