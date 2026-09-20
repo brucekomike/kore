@@ -111,7 +111,8 @@ jobs:
           if (Test-Path $portablePath) {
             Remove-Item $portablePath -Force
           }
-          Compress-Archive -Path (Join-Path $stagingDir '*') -DestinationPath $portablePath
+          $archiveItems = Get-ChildItem -Path $stagingDir -Force
+          Compress-Archive -Path $archiveItems.FullName -DestinationPath $portablePath
           if (-not (Test-Path $portablePath)) {
             throw "Expected portable archive was not generated: $portablePath"
           }
