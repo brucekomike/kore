@@ -108,6 +108,9 @@ jobs:
           $stagingDir = Join-Path $PWD "staging"
           $outputDir = $PWD.Path
           $iscc = Join-Path ${env:ProgramFiles(x86)} "Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) {
+            throw "Inno Setup compiler not found: $iscc"
+          }
           & $iscc "/DMyAppVersion=${{ github.ref_name }}" "/DSourceDir=$stagingDir" "/DOutputDir=$outputDir" "packaging\kore-installer.iss"
           $installerPath = Join-Path $outputDir "kore-windows.exe"
           if (-not (Test-Path $installerPath)) {
@@ -119,6 +122,9 @@ jobs:
           $stagingDir = Join-Path $PWD "staging"
           $outputDir = $PWD.Path
           $iscc = Join-Path ${env:ProgramFiles(x86)} "Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) {
+            throw "Inno Setup compiler not found: $iscc"
+          }
           & $iscc "/DMyAppVersion=${{ github.ref_name }}" "/DSourceDir=$stagingDir" "/DOutputDir=$outputDir" "packaging\kore-portable.iss"
           $portablePath = Join-Path $outputDir "kore-windows-portable.exe"
           if (-not (Test-Path $portablePath)) {
