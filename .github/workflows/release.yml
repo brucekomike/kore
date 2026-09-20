@@ -21,7 +21,7 @@ jobs:
       - name: Build
         run: cmake -B build -S . -DCMAKE_BUILD_TYPE=Release && cmake --build build --config Release
       - name: Test
-        run: ctest --test-dir build --output-on-failure
+        run: ctest --test-dir build -C Release --output-on-failure
       - name: Package AppImage
         run: |
           cmake --install build --prefix AppDir/usr
