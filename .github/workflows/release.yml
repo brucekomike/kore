@@ -96,6 +96,7 @@ jobs:
         shell: pwsh
         run: |
           $stagingDir = Join-Path $PWD "staging"
+          $outputDir = $PWD.Path
           $issPath = Join-Path $env:RUNNER_TEMP "kore-installer.iss"
           @"
           [Setup]
@@ -103,7 +104,7 @@ jobs:
           AppVersion=${{ github.ref_name }}
           DefaultDirName={autopf}\kore
           DefaultGroupName=kore
-          OutputDir=.
+          OutputDir=$outputDir
           OutputBaseFilename=kore-windows
           Compression=lzma
           SolidCompression=yes
