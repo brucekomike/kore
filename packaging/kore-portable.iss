@@ -31,5 +31,5 @@ Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdi
 [Code]
 function GetDefaultPortableDir(Param: string): string;
 begin
-  Result := ExpandConstant('{src}\kore-portable');
+  Result := AddBackslash(ExtractFileDir(ExpandConstant('{srcexe}'))) + 'kore-portable';
 end;
