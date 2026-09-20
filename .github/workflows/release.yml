@@ -103,10 +103,25 @@ jobs:
           if (-not (Test-Path $installerPath)) {
             throw "Expected installer was not generated: $installerPath"
           }
+      - name: Package portable archive
+        shell: pwsh
+        run: |
+          $stagingDir = Join-Path $PWD "staging"
+          $portablePath = Join-Path $PWD "kore-windows-portable.zip"
+          if (Test-Path $portablePath) {
+            Remove-Item $portablePath -Force
+          }
+          $archiveItems = Get-ChildItem -Path $stagingDir -Force
+          Compress-Archive -Path $archiveItems.FullName -DestinationPath $portablePath
+          if (-not (Test-Path $portablePath)) {
+            throw "Expected portable archive was not generated: $portablePath"
+          }
       - uses: actions/upload-artifact@v4
         with:
           name: kore-windows
-          path: kore-windows.exe
+          path: |
+            kore-windows.exe
+            kore-windows-portable.zip
 
   publish:
     name: Publish release
