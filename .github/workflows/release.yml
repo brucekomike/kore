@@ -10,26 +10,40 @@ permissions:
 
 jobs:
   linux:
-    name: Linux package
+    name: Linux AppImage
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install --yes cmake g++ qt6-base-dev qt6-base-dev-tools
+          sudo apt-get install --yes cmake g++ qt6-base-dev qt6-base-dev-tools libfuse2
       - name: Build
-        run: cmake -B build -S . && cmake --build build --config Release
+        run: cmake -B build -S . -DCMAKE_BUILD_TYPE=Release && cmake --build build --config Release
       - name: Test
-        run: ctest --test-dir build --output-on-failure
-      - name: Package
+        run: ctest --test-dir build -C Release --output-on-failure
+      - name: Package AppImage
         run: |
-          cmake --install build --prefix staging
-          tar -czf kore-linux.tar.gz -C staging .
+          cmake --install build --prefix AppDir/usr
+          wget -q -O linuxdeploy-x86_64.AppImage https://github.com/linuxdeploy/linuxdeploy/releases/download/1-alpha-20251107-1/linuxdeploy-x86_64.AppImage
+          wget -q -O linuxdeploy-plugin-qt-x86_64.AppImage https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/1-alpha-20250213-1/linuxdeploy-plugin-qt-x86_64.AppImage
+          chmod +x linuxdeploy-x86_64.AppImage linuxdeploy-plugin-qt-x86_64.AppImage
+          export QMAKE=/usr/lib/qt6/bin/qmake6
+          export APPIMAGE_EXTRACT_AND_RUN=1
+          ./linuxdeploy-x86_64.AppImage \
+            --appdir AppDir \
+            --executable AppDir/usr/bin/kore \
+            --desktop-file AppDir/usr/share/applications/kore.desktop \
+            --icon-file AppDir/usr/share/icons/hicolor/scalable/apps/kore.svg \
+            --plugin qt \
+            --output appimage
+          app_image="$(find . -maxdepth 1 -type f -name '*-x86_64.AppImage' ! -name 'linuxdeploy*.AppImage' | head -n 1)"
+          test -n "$app_image"
+          mv "$app_image" kore-linux-x86_64.AppImage
       - uses: actions/upload-artifact@v4
         with:
           name: kore-linux
-          path: kore-linux.tar.gz
+          path: kore-linux-x86_64.AppImage
 
   macos:
     name: macOS package
@@ -56,10 +70,13 @@ jobs:
           path: kore-macos.dmg
 
   windows:
-    name: Windows package
+    name: Windows single exe
     runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup --yes --no-progress
       - name: Install Qt
         uses: jurplel/install-qt-action@v4
         with:
@@ -79,11 +96,17 @@ jobs:
         shell: pwsh
         run: |
           $stagingDir = Join-Path $PWD "staging"
-          Compress-Archive -Path (Join-Path $stagingDir '*') -DestinationPath kore-windows.zip
+          $outputDir = $PWD.Path
+          $iscc = Join-Path ${env:ProgramFiles(x86)} "Inno Setup 6\ISCC.exe"
+          & $iscc "/DMyAppVersion=${{ github.ref_name }}" "/DSourceDir=$stagingDir" "/DOutputDir=$outputDir" "packaging\kore-installer.iss"
+          $installerPath = Join-Path $outputDir "kore-windows.exe"
+          if (-not (Test-Path $installerPath)) {
+            throw "Expected installer was not generated: $installerPath"
+          }
       - uses: actions/upload-artifact@v4
         with:
           name: kore-windows
-          path: kore-windows.zip
+          path: kore-windows.exe
 
   publish:
     name: Publish release
