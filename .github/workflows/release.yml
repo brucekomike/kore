@@ -97,35 +97,12 @@ jobs:
         run: |
           $stagingDir = Join-Path $PWD "staging"
           $outputDir = $PWD.Path
-          $issPath = Join-Path $env:RUNNER_TEMP "kore-installer.iss"
-          @"
-          [Setup]
-          AppName=kore
-          AppVersion=${{ github.ref_name }}
-          DefaultDirName={autopf}\kore
-          DefaultGroupName=kore
-          OutputDir=$outputDir
-          OutputBaseFilename=kore-windows
-          Compression=lzma
-          SolidCompression=yes
-          ArchitecturesAllowed=x64compatible
-          ArchitecturesInstallIn64BitMode=x64compatible
-
-          [Tasks]
-          Name: "desktopicon"; Description: "Create a &desktop icon"; GroupDescription: "Additional icons:"
-
-          [Files]
-          Source: "$stagingDir\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion
-
-          [Icons]
-          Name: "{autoprograms}\kore"; Filename: "{app}\kore.exe"
-          Name: "{autodesktop}\kore"; Filename: "{app}\kore.exe"; Tasks: desktopicon
-
-          [Run]
-          Filename: "{app}\kore.exe"; Description: "Launch kore"; Flags: nowait postinstall skipifsilent
-          "@ | Set-Content -Path $issPath -NoNewline
           $iscc = Join-Path ${env:ProgramFiles(x86)} "Inno Setup 6\ISCC.exe"
-          & $iscc $issPath
+          & $iscc "/DMyAppVersion=${{ github.ref_name }}" "/DSourceDir=$stagingDir" "/DOutputDir=$outputDir" "packaging\kore-installer.iss"
+          $installerPath = Join-Path $outputDir "kore-windows.exe"
+          if (-not (Test-Path $installerPath)) {
+            throw "Expected installer was not generated: $installerPath"
+          }
       - uses: actions/upload-artifact@v4
         with:
           name: kore-windows
