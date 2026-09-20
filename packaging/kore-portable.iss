@@ -13,7 +13,7 @@
 [Setup]
 AppName=kore Portable
 AppVersion={#MyAppVersion}
-DefaultDirName={localappdata}\kore-portable
+DefaultDirName={userdocs}\kore-portable
 OutputDir={#OutputDir}
 OutputBaseFilename=kore-windows-portable
 Compression=lzma
