@@ -25,13 +25,14 @@ jobs:
       - name: Package AppImage
         run: |
           cmake --install build --prefix AppDir/usr
-          wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/1-alpha-20251107-1/linuxdeploy-x86_64.AppImage
-          wget -q https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/1-alpha-20250213-1/linuxdeploy-plugin-qt-x86_64.AppImage
+          wget -q -O linuxdeploy-x86_64.AppImage https://github.com/linuxdeploy/linuxdeploy/releases/download/1-alpha-20251107-1/linuxdeploy-x86_64.AppImage
+          wget -q -O linuxdeploy-plugin-qt-x86_64.AppImage https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/1-alpha-20250213-1/linuxdeploy-plugin-qt-x86_64.AppImage
           chmod +x linuxdeploy-x86_64.AppImage linuxdeploy-plugin-qt-x86_64.AppImage
           export QMAKE=/usr/lib/qt6/bin/qmake6
           export APPIMAGE_EXTRACT_AND_RUN=1
           ./linuxdeploy-x86_64.AppImage \
             --appdir AppDir \
+            --executable AppDir/usr/bin/kore \
             --desktop-file AppDir/usr/share/applications/kore.desktop \
             --icon-file AppDir/usr/share/icons/hicolor/scalable/apps/kore.svg \
             --plugin qt \
@@ -73,9 +74,9 @@ jobs:
     runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
-      - name: Install 7-Zip
+      - name: Install Inno Setup
         shell: pwsh
-        run: choco install 7zip --yes --no-progress
+        run: choco install innosetup --yes --no-progress
       - name: Install Qt
         uses: jurplel/install-qt-action@v4
         with:
@@ -95,10 +96,35 @@ jobs:
         shell: pwsh
         run: |
           $stagingDir = Join-Path $PWD "staging"
-          $sevenZip = Join-Path $env:ProgramFiles "7-Zip\7z.exe"
-          Push-Location $stagingDir
-          & $sevenZip a -t7z -mx=9 -sfx (Join-Path $PWD "..\kore-windows.exe") .\*
-          Pop-Location
+          $issPath = Join-Path $env:RUNNER_TEMP "kore-installer.iss"
+          @"
+          [Setup]
+          AppName=kore
+          AppVersion=${{ github.ref_name }}
+          DefaultDirName={autopf}\kore
+          DefaultGroupName=kore
+          OutputDir=.
+          OutputBaseFilename=kore-windows
+          Compression=lzma
+          SolidCompression=yes
+          ArchitecturesAllowed=x64compatible
+          ArchitecturesInstallIn64BitMode=x64compatible
+
+          [Tasks]
+          Name: "desktopicon"; Description: "Create a &desktop icon"; GroupDescription: "Additional icons:"
+
+          [Files]
+          Source: "$stagingDir\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion
+
+          [Icons]
+          Name: "{autoprograms}\kore"; Filename: "{app}\kore.exe"
+          Name: "{autodesktop}\kore"; Filename: "{app}\kore.exe"; Tasks: desktopicon
+
+          [Run]
+          Filename: "{app}\kore.exe"; Description: "Launch kore"; Flags: nowait postinstall skipifsilent
+          "@ | Set-Content -Path $issPath -NoNewline
+          $iscc = Join-Path ${env:ProgramFiles(x86)} "Inno Setup 6\ISCC.exe"
+          & $iscc $issPath
       - uses: actions/upload-artifact@v4
         with:
           name: kore-windows
