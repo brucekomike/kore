@@ -36,6 +36,8 @@ jobs:
             --icon-file AppDir/usr/share/icons/hicolor/scalable/apps/kore.svg \
             --plugin qt \
             --output appimage
+          app_image="$(find . -maxdepth 1 -type f -name '*-x86_64.AppImage' ! -name 'linuxdeploy*.AppImage' | head -n 1)"
+          test -n "$app_image"
 
   debian:
     name: Debian
