@@ -94,7 +94,9 @@ jobs:
         run: |
           $stagingDir = Join-Path $PWD "staging"
           $sevenZip = Join-Path $env:ProgramFiles "7-Zip\7z.exe"
-          & $sevenZip a -t7z -mx=9 -sfx kore-windows.exe (Join-Path $stagingDir '*')
+          Push-Location $stagingDir
+          & $sevenZip a -t7z -mx=9 -sfx (Join-Path $PWD "..\kore-windows.exe") .\*
+          Pop-Location
       - uses: actions/upload-artifact@v4
         with:
           name: kore-windows
