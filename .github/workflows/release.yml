@@ -92,6 +92,16 @@ jobs:
         run: |
           $stagingDir = Join-Path $PWD "staging"
           cmake --install build --prefix $stagingDir --config Release
+          $qtBinDir = Join-Path "${env:Qt6_DIR}" "..\..\bin"
+          $windeployqt = Join-Path $qtBinDir "windeployqt.exe"
+          if (-not (Test-Path $windeployqt)) {
+            throw "windeployqt not found: $windeployqt"
+          }
+          $appExe = Join-Path $stagingDir "kore.exe"
+          if (-not (Test-Path $appExe)) {
+            throw "Expected staged executable was not found: $appExe"
+          }
+          & $windeployqt --no-translations --release --dir $stagingDir $appExe
       - name: Package application
         shell: pwsh
         run: |
@@ -103,25 +113,23 @@ jobs:
           if (-not (Test-Path $installerPath)) {
             throw "Expected installer was not generated: $installerPath"
           }
-      - name: Package portable archive
+      - name: Package portable executable
         shell: pwsh
         run: |
           $stagingDir = Join-Path $PWD "staging"
-          $portablePath = Join-Path $PWD "kore-windows-portable.zip"
-          if (Test-Path $portablePath) {
-            Remove-Item $portablePath -Force
-          }
-          $archiveItems = Get-ChildItem -Path $stagingDir -Force
-          Compress-Archive -Path $archiveItems.FullName -DestinationPath $portablePath
+          $outputDir = $PWD.Path
+          $iscc = Join-Path ${env:ProgramFiles(x86)} "Inno Setup 6\ISCC.exe"
+          & $iscc "/DMyAppVersion=${{ github.ref_name }}" "/DSourceDir=$stagingDir" "/DOutputDir=$outputDir" "packaging\kore-portable.iss"
+          $portablePath = Join-Path $outputDir "kore-windows-portable.exe"
           if (-not (Test-Path $portablePath)) {
-            throw "Expected portable archive was not generated: $portablePath"
+            throw "Expected portable executable was not generated: $portablePath"
           }
       - uses: actions/upload-artifact@v4
         with:
           name: kore-windows
           path: |
             kore-windows.exe
-            kore-windows-portable.zip
+            kore-windows-portable.exe
 
   publish:
     name: Publish release
